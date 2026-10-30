@@ -1,0 +1,903 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<title>God Father — Live wall</title>
+<style>
+  :root{
+    --bg:#0a0c10; --panel:#14181f; --elevated:#11141a; --border:#232a35; --border-strong:#2f3846;
+    --text:#e6e9ef; --dim:#9aa4b2; --faint:#667085;
+    --accent:#4f8cff; --success:#35d07f; --warn:#ffb02e; --danger:#ff5f5f;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+       font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px}
+  header.bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+             padding:11px 16px;background:var(--elevated);border-bottom:1px solid var(--border);
+             position:sticky;top:0;z-index:5}
+  .brand{display:flex;align-items:center;gap:10px}
+  .mark{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;
+        background:linear-gradient(135deg,var(--accent),#7b5cff);font-weight:700;font-size:12px;color:#fff}
+  h1{margin:0;font-size:14px;font-weight:600}
+  .sub{margin:1px 0 0;font-size:11px;color:var(--faint)}
+  .spacer{margin-left:auto}
+  .ro{font-size:11px;color:var(--faint);border:1px solid var(--border);
+      border-radius:20px;padding:3px 10px}
+  .refresh{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--faint)}
+  .refresh select{padding:5px 8px;border:1px solid var(--border);border-radius:8px;
+                  background:var(--panel);color:var(--text);font:inherit;font-size:12px;
+                  outline:none;cursor:pointer}
+  .refresh select:focus{border-color:var(--accent)}
+  .seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .seg button{border:0;background:var(--panel);color:var(--dim);padding:6px 11px;cursor:pointer;
+              font:inherit;font-size:12px;border-right:1px solid var(--border)}
+  .seg button:last-child{border-right:0}
+  .seg button.on{background:rgba(79,140,255,.14);color:var(--accent);font-weight:600}
+  main{padding:14px}
+  .wall{display:grid;gap:14px}
+  .wall.fit{overflow:hidden}
+  .wall.fit .tile{height:var(--tile-h)}
+  .wall.fit .body{aspect-ratio:auto;flex:1;min-height:0}
+  .tile{border:1px solid var(--border);border-radius:10px;background:var(--panel);overflow:hidden;
+        display:flex;flex-direction:column}
+  .tile-bar{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--elevated);
+            border-bottom:1px solid var(--border)}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--faint);flex:0 0 auto}
+  .dot.running{background:var(--success);box-shadow:0 0 0 3px rgba(53,208,127,.16)}
+  .dot.external{background:transparent;border:2px solid var(--success)}
+  .dot.crashed{background:var(--danger)}
+  .name{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .port{font-family:var(--mono);font-size:11px;color:var(--faint)}
+  .open{margin-left:auto;color:var(--faint);text-decoration:none;font-size:12px;padding:2px 6px;border-radius:6px}
+  .open:hover{color:var(--accent)}
+  .body{position:relative;width:100%;aspect-ratio:16/10;overflow:hidden;background:#07090c}
+  iframe{position:absolute;top:0;left:0;border:0;transform-origin:top left;background:#fff}
+  .ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:7px;padding:18px;text-align:center}
+  .ph strong{font-size:13px;color:var(--dim)}
+  .ph span{font-size:11.5px;color:var(--faint);line-height:1.5;max-width:280px}
+  .ph.unshared strong{color:var(--warn)}
+  .live{font-size:10px;opacity:.75;flex-shrink:0}
+  .empty{padding:60px 20px;text-align:center;color:var(--faint)}
+  [hidden]{display:none !important}
+  .ctl{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  /* Analytics */
+  .an-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+  .an-head strong{font-size:13px}
+  .meta{font-family:var(--mono);font-size:11px;color:var(--faint)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--border);
+        border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px}
+  .kpi{display:flex;flex-direction:column;gap:3px;padding:12px 14px;background:var(--panel);min-width:0}
+  .lbl{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
+  .val{font-size:21px;font-weight:600;line-height:1.15;font-variant-numeric:tabular-nums}
+  .kpi.bad .val{color:var(--danger)}
+  .kpi.dim .val{color:var(--faint);font-weight:500}
+  .ksub{font-size:11px;color:var(--dim)}
+  .highs{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px}
+  .high{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid var(--border);
+        border-left:3px solid var(--accent);border-radius:10px;background:var(--panel);min-width:0}
+  .high.bad{border-left-color:var(--danger)} .high.good{border-left-color:var(--success)}
+  .high .hn{font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .high .hn.none{color:var(--faint)}
+  .high b{font-size:13px;font-variant-numeric:tabular-nums}
+  .panel{padding:13px 15px;border:1px solid var(--border);border-radius:10px;background:var(--panel);
+         margin-bottom:12px;min-width:0}
+  .ph-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:12.5px}
+  .ph-head span{font-size:11px;color:var(--faint)}
+  .ph-head.spaced{margin-top:16px}
+  .split{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+  .chart{position:relative;height:120px;margin:16px 0 24px}
+  .chart svg{display:block;width:100%;height:120px;overflow:visible}
+  .area{fill:rgba(79,140,255,.14)} .line{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+  .eline{fill:none;stroke:var(--danger);stroke-width:1.5;vector-effect:non-scaling-stroke}
+  .peak{position:absolute;top:-16px;right:0;font-family:var(--mono);font-size:10px;color:var(--faint)}
+  .axis{position:absolute;left:0;right:0;top:calc(100% + 6px);display:flex;justify-content:space-between;
+        font-family:var(--mono);font-size:10px;color:var(--faint)}
+  .sbar{display:flex;height:8px;gap:2px;border-radius:4px;overflow:hidden;margin-bottom:8px}
+  .sbar i{border-radius:2px;min-width:3px}
+  .good{background:var(--success)} .info{background:var(--accent)} .warnc{background:var(--warn)} .badc{background:var(--danger)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin:0;padding:0;list-style:none;font-size:11.5px;color:var(--dim)}
+  .legend li{display:flex;align-items:center;gap:5px;font-variant-numeric:tabular-nums}
+  .legend b{color:var(--text);font-weight:600}
+  .sw{width:8px;height:8px;border-radius:2px;display:inline-block}
+  .share{display:flex;flex-direction:column;gap:7px;margin:0;padding:0;list-style:none;font-size:12px}
+  .share li{display:grid;grid-template-columns:minmax(80px,150px) 1fr 50px 42px;align-items:center;gap:10px}
+  .share .sn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+  .track{height:8px;border-radius:4px;background:var(--elevated);overflow:hidden}
+  .track i{display:block;height:100%;border-radius:4px;background:var(--accent)}
+  .num{text-align:right;font-variant-numeric:tabular-nums}
+  .muted{color:var(--faint)} .red{color:var(--danger)}
+  .hours{display:flex;align-items:flex-end;gap:3px;height:90px}
+  .hours i{flex:1;border-radius:2px 2px 0 0;background:rgba(79,140,255,.14);border-top:2px solid var(--accent)}
+  .hours i.top{background:var(--accent)}
+  .haxis{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:4px}
+  table.top{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+  table.top td{padding:5px 6px;border-top:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  table.top tr:first-child td{border-top:0}
+  .mono{font-family:var(--mono)} .meth{width:58px;font-size:10.5px;color:var(--dim)}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+  .card{padding:13px 15px;border:1px solid var(--border);border-radius:10px;background:var(--panel);min-width:0}
+  .card-head{display:flex;align-items:center;gap:7px;margin-bottom:8px;font-size:12.5px;flex-wrap:wrap}
+  .card-head .cn{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .card-head .meta{margin-left:auto}
+  .mini{height:36px;margin-bottom:10px} .mini svg{display:block;width:100%;height:36px}
+  .mini.empty{border-bottom:1px dashed var(--border-strong)}
+  .facts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 12px;margin:0;padding:0;list-style:none}
+  .facts li{display:flex;flex-direction:column;font-size:12px}
+  .facts li span{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+  .facts li b{font-weight:600;font-variant-numeric:tabular-nums}
+  .facts li.bad b{color:var(--danger)} .facts li.dim b{color:var(--faint);font-weight:500}
+  .facts small{font-size:10.5px;font-weight:400;color:var(--dim)}
+  .paths{margin:12px 0 0;padding:10px 0 0;border-top:1px solid var(--border);list-style:none;
+         display:flex;flex-direction:column;gap:4px;font-size:11.5px}
+  .paths li{display:grid;grid-template-columns:52px 1fr auto;gap:8px}
+  .paths .p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hint{margin:10px 0 0;font-size:11.5px;color:var(--faint);line-height:1.5}
+  details.unc{margin-top:16px;padding:11px 15px;border:1px dashed var(--border-strong);border-radius:10px;
+              font-size:12.5px;color:var(--dim)}
+  details.unc summary{cursor:pointer}
+  details.unc ul{margin:10px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+  details.unc li{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .note{margin:14px 0 0;font-size:11.5px;color:var(--faint);line-height:1.6;max-width:84ch}
+  /* News ticker */
+  .ticker{flex-basis:100%;display:flex;height:34px;border:1px solid var(--border);border-radius:9px;
+          background:var(--bg);overflow:hidden}
+  .tk-label{display:flex;align-items:center;gap:7px;padding:0 12px;flex-shrink:0;font-size:10.5px;font-weight:700;
+            letter-spacing:.08em;text-transform:uppercase;color:var(--faint);background:var(--panel);
+            border-right:1px solid var(--border)}
+  .tk-label i{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+  .tk-label.on{color:var(--danger)} .tk-label.on i{background:var(--danger);animation:tkp 1.6s ease-in-out infinite}
+  @keyframes tkp{50%{opacity:.3}}
+  .tk-view{position:relative;flex:1;min-width:0;overflow:hidden}
+  .tk-track{position:absolute;top:0;bottom:0;left:0;display:flex;align-items:center;white-space:nowrap;will-change:transform}
+  .tk-item{position:relative;display:inline-flex;align-items:baseline;gap:8px;padding:0 22px 0 12px;font-size:12.5px}
+  .tk-item::after{content:'◆';position:absolute;right:0;font-size:8px;color:var(--border-strong)}
+  .tk-time{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+  .tk-app{font-weight:600}
+  .tk-item.lv-good .tk-app{color:var(--success)} .tk-item.lv-info .tk-app{color:var(--dim)}
+  .tk-item.lv-warn .tk-app,.tk-item.lv-warn .tk-text{color:var(--warn)}
+  .tk-item.lv-error .tk-app,.tk-item.lv-error .tk-text{color:var(--danger)}
+  .tk-item.fresh .tk-app::before{content:'NEW';margin-right:6px;padding:1px 5px;border-radius:4px;font-size:9px;
+                                 font-weight:700;color:var(--bg);background:var(--accent)}
+  .tk-speed{display:flex;align-items:center;gap:2px;padding:0 5px;flex-shrink:0;border-left:1px solid var(--border);background:var(--panel)}
+  .tk-speed button{padding:3px 8px;border:0;border-radius:6px;background:none;color:var(--faint);font:inherit;font-size:11px;cursor:pointer}
+  .tk-speed button.on{color:var(--accent);background:rgba(79,140,255,.14);font-weight:600}
+  .tk-empty{position:absolute;inset:0;display:flex;align-items:center;padding:0 12px;font-size:12px;color:var(--faint);
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* Live logs — plain text, one line per log line, nothing decorative. */
+  .wl.with-logs{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;align-items:start}
+  @media (max-width:1000px){ .wl.with-logs{grid-template-columns:minmax(0,1fr)} .lc{position:relative;height:460px} }
+  .lc{position:sticky;top:120px;display:flex;flex-direction:column;height:calc(100vh - 140px);min-height:380px;
+      border:1px solid var(--border);border-radius:10px;background:var(--panel);overflow:hidden}
+  .lc-head{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border)}
+  .lc-head strong{font-size:13px;font-weight:600}
+  .lc-head span{font-size:12px;color:var(--faint)}
+  .lc-dot{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+  .lc-dot.on{background:var(--success)}
+  .lc-chips{display:flex;flex-wrap:wrap;gap:4px 14px;padding:8px 14px;border-bottom:1px solid var(--border)}
+  .lc-chips button{padding:0;border:0;background:none;color:var(--faint);font:inherit;font-size:12px;cursor:pointer}
+  .lc-chips button.on{color:var(--text);text-decoration:underline;text-underline-offset:3px}
+  .lc-list{flex:1;min-height:0;display:flex;flex-direction:column;padding:4px 0;overflow-y:auto;
+           scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+  .lc-list>:first-child{margin-top:auto}
+  .lc-msg{padding:5px 14px;font-size:13px;line-height:1.5;color:var(--dim);overflow-wrap:anywhere}
+  .lc-time{margin-right:8px;font-family:var(--mono);font-size:11.5px;color:var(--faint)}
+  .lc-app{margin-right:8px;font-weight:600;color:var(--text)}
+  .lc-msg.lv-good .lc-text{color:var(--success)} .lc-msg.lv-warn .lc-text{color:var(--warn)} .lc-msg.lv-error .lc-text{color:var(--danger)}
+  .lc-skip{padding:4px 14px;font-size:12px;font-style:italic;color:var(--faint)}
+  .lc-empty{margin:0;padding:0 14px;font-size:13px;color:var(--faint)}
+  .lc-resume{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);padding:5px 12px;border:1px solid var(--border-strong);
+             border-radius:6px;background:var(--elevated);color:var(--text);font:inherit;font-size:12px;cursor:pointer}
+  .lc-toggle{border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--dim);padding:6px 11px;
+             font:inherit;font-size:12px;cursor:pointer}
+  .lc-toggle.on{color:var(--accent);border-color:var(--accent)}
+  /* On a phone the speed buttons would leave the news a few letters wide. */
+  @media (max-width:600px){ #tkspeed{display:none} .tk-label{padding:0 9px} }
+  @media (max-width:700px){ main{padding:9px} .wall{gap:9px} .split{grid-template-columns:1fr}
+    .share li{grid-template-columns:minmax(70px,110px) 1fr 44px 36px} }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand">
+    <span class="mark">GF</span>
+    <div><h1>Live wall</h1><p class="sub" id="sub">loading…</p></div>
+  </div>
+  <div class="seg" id="views"></div>
+  <div class="spacer"></div>
+  <div class="ctl" id="wallctl">
+    <div class="seg" id="cols"></div>
+    <label class="refresh">Refresh <select id="refresh"></select></label>
+    <button class="lc-toggle" id="lctoggle" title="Show or hide every app’s log as a live feed">💬 Live logs</button>
+  </div>
+  <div class="ctl" id="anctl" hidden><div class="seg" id="windows"></div></div>
+  <span class="ro">read-only view</span>
+  <div class="ticker" role="marquee" aria-label="News from your applications">
+    <span class="tk-label" id="tklabel"><i></i>News</span>
+    <div class="tk-view" id="tkview"><div class="tk-track" id="tktrack"></div>
+      <span class="tk-empty" id="tkempty">No news yet.</span></div>
+    <div class="tk-speed" id="tkspeed" role="group" aria-label="Ticker speed"></div>
+  </div>
+</header>
+
+<main>
+  <!-- Hidden rather than removed, so switching tabs does not reload every frame. -->
+  <div id="wallpane"><div class="wl" id="wl">
+    <div class="wall" id="wall"></div>
+    <aside class="lc" id="lc" aria-label="Live logs from every application">
+      <div class="lc-head"><i class="lc-dot" id="lcdot"></i><strong>Live logs</strong><span id="lcstate">connecting…</span></div>
+      <div class="lc-chips" id="lcchips" hidden></div>
+      <div class="lc-list" id="lclist"><p class="lc-empty" id="lcempty">Quiet for now. Every line your applications write will appear here, newest at the bottom.</p></div>
+    </aside>
+  </div></div>
+  <div id="anpane" hidden></div>
+</main>
+
+<script>
+const FRAME_W = 1280, FRAME_H = 800;
+const LABEL = { unshared:'Not on the network', blocked:'Refuses embedding', text:'Not a web page',
+                error:'Error response', down:'Not running', noport:'No port set' };
+let mode = window.innerWidth < 760 ? 1 : 2;   // 1|2|3|4|'fit'
+let columns = mode;
+let current = [];
+// Rebuilding the DOM recreates every iframe, which reloads every app. Only do
+// that when the set of tiles actually changes, not on each poll.
+let signature = '';
+// Which tab is showing, remembered like the refresh interval below.
+let view = 'wall';
+try { if (localStorage.getItem('gf_wall_view') === 'analytics') view = 'analytics'; } catch {}
+let anMinutes = 60;
+try { anMinutes = Number(localStorage.getItem('gf_an_minutes')) || 60; } catch {}
+let anTimer = null, anData = null, anWanted = anMinutes;
+
+// This page is meant to be left on a screen, so the chosen interval survives a
+// page reload rather than resetting every time the display comes back.
+const REFRESH_CHOICES = [
+  ['Off', 0], ['10 seconds', 10000], ['30 seconds', 30000], ['1 minute', 60000],
+  ['5 minutes', 300000], ['15 minutes', 900000], ['30 minutes', 1800000],
+  ['1 hour', 3600000], ['6 hours', 21600000],
+];
+let refreshMs = Number(localStorage.getItem('gf_wall_refresh') || 0);
+let refreshTimer = null;
+
+// Live reload arrives in the tile data rather than on a socket, so this page
+// stays plain read-only GETs. Nothing watched: poll lazily.
+// Something watched: poll often enough that an edit lands while you look at it.
+const POLL_IDLE = 20000, POLL_WATCHING = 2500;
+let pollTimer = null, pollEvery = 0;
+let revs = null;   // null until the first load, so arriving late reloads nothing
+
+function applyPoll(){
+  const wanted = current.some(t => t.watching) ? POLL_WATCHING : POLL_IDLE;
+  if (wanted === pollEvery) return;
+  pollEvery = wanted;
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(load, pollEvery);
+}
+
+function reloadFrame(appId){
+  const frame = document.querySelector('iframe[data-app="' + appId + '"]');
+  if (frame) frame.src = frame.src;   // a fresh navigation, even cross-origin
+}
+
+/** Reload only the frames whose watched files changed since the last poll. */
+function applyRevisions(rebuilt){
+  const previous = revs;
+  const next = {};
+  current.forEach(t => {
+    const rev = t.rev ?? 0;
+    next[t.app_id] = rev;
+    // A rebuild already created a brand-new frame; reloading it again is waste.
+    if (!rebuilt && previous && (previous[t.app_id] ?? 0) !== rev) reloadFrame(t.app_id);
+  });
+  revs = next;
+}
+
+function renderRefresh(){
+  const sel = document.getElementById('refresh');
+  sel.innerHTML = '';
+  REFRESH_CHOICES.forEach(([label, ms]) => {
+    const o = document.createElement('option');
+    o.value = ms; o.textContent = label;
+    if (ms === refreshMs) o.selected = true;
+    sel.appendChild(o);
+  });
+  sel.onchange = () => {
+    refreshMs = Number(sel.value);
+    localStorage.setItem('gf_wall_refresh', String(refreshMs));
+    applyRefresh();
+  };
+}
+
+function applyRefresh(){
+  if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+  if (refreshMs > 0) refreshTimer = setInterval(() => load(true), refreshMs);
+}
+
+const GAP = 14, BAR = 33, MIN_W = 130, MIN_H = 100, TARGET = 1.6;
+
+// Solve for columns AND tile height together, so nothing lands below the fold.
+function computeFit(count){
+  const wall = document.getElementById('wall');
+  if (!wall || !count) return { columns: 1, tileH: null };
+  const width = wall.clientWidth;
+  const available = window.innerHeight - wall.getBoundingClientRect().top - 14;
+  let best = null;
+  for (let c = 1; c <= count; c++){
+    const rows = Math.ceil(count / c);
+    const tw = (width - GAP * (c - 1)) / c;
+    const th = (available - GAP * (rows - 1)) / rows;
+    if (tw < MIN_W || th < MIN_H) continue;
+    const score = Math.abs(Math.log((tw / Math.max(1, th - BAR)) / TARGET));
+    if (!best || score < best.score) best = { columns: c, tileH: th, score };
+  }
+  if (!best){
+    const c = Math.ceil(Math.sqrt(count)), rows = Math.ceil(count / c);
+    return { columns: c, tileH: Math.max(MIN_H, (available - GAP * (rows - 1)) / rows) };
+  }
+  return { columns: best.columns, tileH: best.tileH };
+}
+
+function renderCols(){
+  const box = document.getElementById('cols');
+  box.innerHTML = '';
+  [1,2,3,4,'fit'].forEach(n => {
+    const b = document.createElement('button');
+    b.textContent = n === 'fit' ? 'Fit' : n + '×';
+    if (n === mode) b.className = 'on';
+    b.title = n === 'fit' ? 'Fit every tile on screen, no scrolling' : n + ' per row';
+    b.onclick = () => { mode = n; renderCols(); render(true); };
+    box.appendChild(b);
+  });
+}
+
+function scaleFrames(){
+  document.querySelectorAll('.body').forEach(box => {
+    const frame = box.querySelector('iframe');
+    if (!frame) return;
+    const scale = box.clientWidth / FRAME_W;
+    frame.style.transform = 'scale(' + scale + ')';
+    // A Fit tile can be taller than 16:10; give the page a taller window rather
+    // than leaving the bottom of the tile black.
+    frame.style.height = Math.max(FRAME_H, Math.ceil(box.clientHeight / scale)) + 'px';
+  });
+}
+
+function render(force){
+  const wall = document.getElementById('wall');
+  const shown = current.length;
+
+  if (mode === 'fit'){
+    const f = computeFit(shown);
+    columns = f.columns;
+    wall.classList.add('fit');
+    if (f.tileH) wall.style.setProperty('--tile-h', f.tileH + 'px');
+  } else {
+    columns = mode;
+    wall.classList.remove('fit');
+    wall.style.removeProperty('--tile-h');
+  }
+
+  wall.style.gridTemplateColumns = 'repeat(' + columns + ', minmax(0, 1fr))';
+  const live = current.filter(t => t.kind === 'web');
+  if (view === 'wall') document.getElementById('sub').textContent =
+    live.length + ' live · ' + (current.length - live.length) + ' not shown';
+
+  if (!current.length){
+    wall.innerHTML = '<p class="empty">No applications to show.</p>';
+    signature = '';
+    return false;
+  }
+
+  // Same tiles as last time: leave the frames alone so they keep running.
+  // Deliberately excludes rev — a revision reloads one frame, not all of them.
+  const next = current.map(t => t.app_id + ':' + t.kind + ':' + (t.url || '')).join('|');
+  if (!force && next === signature){ scaleFrames(); return false; }
+  signature = next;
+
+  wall.innerHTML = '';
+  current.forEach(t => {
+    const tile = document.createElement('article');
+    tile.className = 'tile';
+
+    const bar = document.createElement('header');
+    bar.className = 'tile-bar';
+    bar.innerHTML = '<span class="dot ' + t.status + '"></span>' +
+                    '<span class="name"></span><span class="port">:' + (t.port ?? '—') + '</span>' +
+                    (t.watching ? '<span class="live" title="Live reload is on">⚡</span>' : '');
+    bar.querySelector('.name').textContent = t.name;
+    if (t.kind === 'web' && t.url){
+      const a = document.createElement('a');
+      a.className = 'open'; a.href = t.url; a.target = '_blank'; a.rel = 'noreferrer';
+      a.textContent = '↗'; a.title = 'Open in a new tab';
+      bar.appendChild(a);
+    }
+    tile.appendChild(bar);
+
+    const body = document.createElement('div');
+    body.className = 'body';
+    if (t.kind === 'web' && t.url){
+      const frame = document.createElement('iframe');
+      frame.src = t.url; frame.title = t.name; frame.loading = 'lazy';
+      frame.dataset.app = t.app_id;
+      // Same delegation as the dashboard wall. Note that a camera needs a
+      // secure context as well, and this page is plain http on a LAN address —
+      // so an app asking for one here will correctly report it cannot.
+      frame.allow = 'camera; microphone; display-capture; fullscreen';
+      frame.style.width = FRAME_W + 'px'; frame.style.height = FRAME_H + 'px';
+      body.appendChild(frame);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'ph ' + (t.kind === 'unshared' ? 'unshared' : '');
+      const s = document.createElement('strong'); s.textContent = LABEL[t.kind] || t.kind;
+      ph.appendChild(s);
+      if (t.note){ const n = document.createElement('span'); n.textContent = t.note; ph.appendChild(n); }
+      body.appendChild(ph);
+    }
+    tile.appendChild(body);
+    wall.appendChild(tile);
+  });
+  scaleFrames();
+  return true;
+}
+
+async function load(force){
+  try {
+    const res = await fetch('/api/tiles', { cache: 'no-store' });
+    current = await res.json();
+    const rebuilt = render(force);
+    applyRevisions(rebuilt);
+    applyPoll();
+  } catch {
+    if (view === 'wall') document.getElementById('sub').textContent = 'cannot reach God Father';
+  }
+}
+
+renderCols();
+renderRefresh();
+applyRefresh();
+load();
+// Re-probe periodically. This does not reload the frames themselves — only a
+// tile whose revision moved gets reloaded, and only that one.
+applyPoll();
+window.addEventListener('resize', () => {
+  if (view !== 'wall') return;
+  if (mode === 'fit') render(true); else scaleFrames();
+});
+
+// ------------------------------------------------------------- Analytics
+// The same figures as the dashboard's Analytics tab, read from /api/traffic.
+// Look, never touch: there is nothing here that changes anything.
+
+
+const WINDOWS = [[60, '1h'], [360, '6h'], [1440, '24h'], [10080, '7d']];
+const CODES = [['s2xx', '2xx', 'good'], ['s3xx', '3xx', 'info'], ['s4xx', '4xx', 'warnc'], ['s5xx', '5xx', 'badc']];
+const SOURCES = [['loopback', 'This machine', 'info'], ['lan', 'Local network', 'good'], ['external', 'Internet', 'warnc']];
+
+function esc(v){ return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function n(v){ if (v == null) return '—'; if (v >= 1e6) return (v/1e6).toFixed(1)+'M'; if (v >= 1e4) return (v/1e3).toFixed(1)+'k'; return v.toLocaleString(); }
+function pm(v){ if (!v) return '0'; return v >= 10 ? Math.round(v).toLocaleString() : v.toFixed(1); }
+function ms(v){ if (v == null) return null; return v >= 1000 ? (v/1000).toFixed(1)+' s' : Math.round(v)+' ms'; }
+function mem(mb){ if (mb == null) return '—'; return mb >= 1024 ? (mb/1024).toFixed(1)+' GB' : Math.round(mb)+' MB'; }
+function winLabel(m){ const w = WINDOWS.find(x => x[0] === m); return w ? w[1] : m+'m'; }
+function clock(iso, m){
+  if (!iso) return '—'; const d = new Date(iso); if (isNaN(d)) return '—';
+  return m > 1440 ? d.toLocaleString([], {weekday:'short', hour:'2-digit', minute:'2-digit', hour12:false})
+                  : d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false});
+}
+function ago(iso){
+  if (!iso) return 'never'; const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (s < 90) return 'just now'; if (s < 3600) return Math.round(s/60)+' min ago';
+  if (s < 86400) return Math.round(s/3600)+' h ago'; return Math.round(s/86400)+' d ago';
+}
+function uptime(s){
+  if (s == null) return '—'; s = Math.floor(s);
+  const d = Math.floor(s/86400), h = Math.floor(s%86400/3600), m = Math.floor(s%3600/60);
+  return d ? d+'d '+h+'h' : h ? h+'h '+m+'m' : m+'m '+(s%60)+'s';
+}
+
+function renderViews(){
+  const box = document.getElementById('views');
+  box.innerHTML = '';
+  [['wall', '▦ Wall'], ['analytics', '📊 Analytics']].forEach(([key, label]) => {
+    const b = document.createElement('button');
+    b.textContent = label; if (key === view) b.className = 'on';
+    b.onclick = () => setView(key);
+    box.appendChild(b);
+  });
+  document.getElementById('wallctl').hidden = view !== 'wall';
+  document.getElementById('anctl').hidden = view !== 'analytics';
+  document.getElementById('wallpane').hidden = view !== 'wall';
+  document.getElementById('anpane').hidden = view !== 'analytics';
+  document.querySelector('header.bar h1').textContent = view === 'wall' ? 'Live wall' : 'Analytics';
+}
+
+function renderWindows(){
+  const box = document.getElementById('windows');
+  box.innerHTML = '';
+  WINDOWS.forEach(([m, label]) => {
+    const b = document.createElement('button');
+    b.textContent = label; if (m === anMinutes) b.className = 'on';
+    b.onclick = () => {
+      anMinutes = m;
+      try { localStorage.setItem('gf_an_minutes', String(m)); } catch {}
+      renderWindows(); loadAnalytics();
+    };
+    box.appendChild(b);
+  });
+}
+
+function setView(next){
+  view = next;
+  try { localStorage.setItem('gf_wall_view', next); } catch {}
+  renderViews();
+  if (anTimer){ clearInterval(anTimer); anTimer = null; }
+  if (view === 'analytics'){
+    loadAnalytics();
+    anTimer = setInterval(loadAnalytics, 15000);
+  } else {
+    // Frames were hidden, not removed: rescale them, do not rebuild them.
+    render(false);
+  }
+}
+
+async function loadAnalytics(){
+  const m = anMinutes; anWanted = m;
+  try {
+    const res = await fetch('/api/traffic?minutes=' + m, { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    // A slow answer for the previous window must not land on the one just picked.
+    if (anWanted !== m || view !== 'analytics') return;
+    anData = data; renderAnalytics();
+  } catch {
+    if (view !== 'analytics') return;
+    document.getElementById('sub').textContent = 'cannot reach God Father';
+    if (!anData) document.getElementById('anpane').innerHTML =
+      '<p class="empty">Analytics is not available. God Father may need a restart to serve it.</p>';
+  }
+}
+
+function kpi(label, value, sub, tone){
+  return '<div class="kpi ' + (tone || '') + '"><span class="lbl">' + esc(label) + '</span><span class="val">' +
+         esc(value) + '</span><span class="ksub">' + esc(sub) + '</span></div>';
+}
+function high(title, app, value, sub, tone){
+  return '<div class="high ' + (tone || '') + '"><span class="lbl">' + esc(title) + '</span>' +
+    (app ? '<span class="hn">' + esc(app.name) + '</span>' : '<span class="hn none">—</span>') +
+    (value ? '<b>' + esc(value) + '</b>' : '') + '<span class="ksub">' + esc(sub) + '</span></div>';
+}
+function splitBar(parts, totals){
+  const total = parts.reduce((a, p) => a + (totals[p[0]] || 0), 0);
+  if (!total) return '<p class="hint">Nothing counted in this window.</p>';
+  return '<div class="sbar">' + parts.filter(p => totals[p[0]]).map(p =>
+      '<i class="' + p[2] + '" style="flex-grow:' + totals[p[0]] + '" title="' + esc(p[1]) + ': ' + totals[p[0]] + '"></i>').join('') +
+    '</div><ul class="legend">' + parts.map(p =>
+      '<li><span class="sw ' + p[2] + '"></span>' + esc(p[1]) + ' <b>' + n(totals[p[0]] || 0) + '</b><span class="muted">' +
+      Math.round((totals[p[0]] || 0) * 100 / total) + '%</span></li>').join('') + '</ul>';
+}
+function chart(points, m){
+  if (!points.length || !points.some(p => p.requests)) return '<p class="hint">No requests in this window.</p>';
+  const W = 600, H = 120, P = 4, peak = Math.max(...points.map(p => p.rpm), 1);
+  const x = i => P + i * (W - P * 2) / Math.max(1, points.length - 1);
+  const y = v => H - P - v / peak * (H - P * 2);
+  const line = points.map((p, i) => x(i) + ',' + y(p.rpm)).join(' ');
+  const errs = points.some(p => p.errors);
+  const eline = points.map((p, i) => x(i) + ',' + y(p.requests ? p.errors * p.rpm / p.requests : 0)).join(' ');
+  return '<div class="chart"><svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Requests per minute">' +
+    '<polygon class="area" points="' + P + ',' + (H - P) + ' ' + line + ' ' + x(points.length - 1) + ',' + (H - P) + '"/>' +
+    '<polyline class="line" points="' + line + '"/>' + (errs ? '<polyline class="eline" points="' + eline + '"/>' : '') +
+    '</svg><span class="peak">peak ' + pm(peak) + '/min</span><div class="axis"><span>' + clock(points[0].ts, m) +
+    '</span><span><span class="sw info"></span> requests/min' + (errs ? ' &nbsp;<span class="sw badc"></span> failed' : '') +
+    '</span><span>now</span></div></div>';
+}
+function spark(values){
+  if (!values.length || !values.some(Boolean)) return '<div class="mini empty"></div>';
+  const W = 300, H = 36, peak = Math.max(...values, 1);
+  const x = i => i * W / Math.max(1, values.length - 1), y = v => H - 2 - v / peak * (H - 4);
+  const line = values.map((v, i) => x(i) + ',' + y(v)).join(' ');
+  return '<div class="mini"><svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true">' +
+    '<polygon class="area" points="0,' + H + ' ' + line + ' ' + W + ',' + H + '"/><polyline class="line" points="' + line + '"/></svg></div>';
+}
+function card(a, label){
+  const lat = ms(a.p95_ms);
+  const fact = (name, value, cls) => '<li class="' + (cls || '') + '"><span>' + name + '</span><b>' + value + '</b></li>';
+  return '<div class="card"><div class="card-head"><span class="dot ' + esc(a.status) + '"></span><span class="cn">' + esc(a.name) +
+    '</span><span class="mono muted">:' + esc(a.port ?? '—') + '</span><span class="meta">last request ' + ago(a.last_request) + '</span></div>' +
+    spark(a.spark) + '<ul class="facts">' +
+    fact('Requests', n(a.requests)) + fact('Now', pm(a.rpm_now) + '/min') + fact('Share', a.share + '%') +
+    fact('Errors', n(a.errors) + ' <small>(' + a.error_rate + '%)</small>', a.error_rate >= 5 ? 'bad' : '') +
+    fact('5xx', n(a.s5xx), a.s5xx ? 'bad' : '') + fact('p95', lat || 'not logged', lat ? '' : 'dim') +
+    fact('CPU', a.cpu_percent != null ? a.cpu_percent + '%' : '—') + fact('Memory', mem(a.memory_mb)) +
+    fact('Uptime', uptime(a.uptime_seconds) + (a.crashes ? ' <small>· ' + a.crashes + ' crash' + (a.crashes > 1 ? 'es' : '') + '</small>' : ''), a.crashes ? 'bad' : '') +
+    '</ul>' + (a.top_paths.length
+      ? '<ul class="paths">' + a.top_paths.slice(0, 3).map(p => '<li><span class="mono meth">' + esc(p.method) +
+          '</span><span class="mono p" title="' + esc(p.path) + '">' + esc(p.path) + '</span><span class="num">' + n(p.requests) + '</span></li>').join('') + '</ul>'
+      : '<p class="hint">No requests in the last ' + label + '.</p>') + '</div>';
+}
+
+function renderAnalytics(){
+  const d = anData, t = d.totals, m = d.window_minutes, label = winLabel(m);
+  const counted = d.apps.filter(a => a.counted), uncounted = d.apps.filter(a => !a.counted);
+  const busiest = counted.find(a => a.requests > 0);
+  const slowest = counted.filter(a => a.p95_ms != null).sort((a, b) => b.p95_ms - a.p95_ms)[0];
+  const worst = counted.filter(a => a.errors > 0).sort((a, b) => b.error_rate - a.error_rate)[0];
+  const names = Object.fromEntries(d.apps.map(a => [a.app_id, a.name]));
+  const active = counted.filter(a => a.requests > 0);
+  const top = active.length ? active[0].requests : 1;
+  const hours = d.by_hour, hpeak = Math.max(...hours, 1), hbest = hours.indexOf(Math.max(...hours));
+
+  document.getElementById('sub').textContent =
+    n(t.requests) + ' requests · ' + label + (d.last_scan ? ' · logs read ' + clock(d.last_scan, 0) : '');
+
+  let h = '<div class="kpis">' +
+    kpi('Requests · ' + label, n(t.requests), 'across ' + t.apps_active + ' of ' + t.apps_counted + ' counted apps') +
+    kpi('Right now', pm(t.rpm_now) + '/min', 'last 5 minutes') +
+    kpi('Average', pm(t.rpm) + '/min', 'over ' + label) +
+    kpi('Error rate', t.error_rate + '%', n(t.s4xx) + ' 4xx · ' + n(t.s5xx) + ' 5xx', t.error_rate >= 5 ? 'bad' : '') +
+    kpi('Server errors', n(t.s5xx), t.requests ? t.server_error_rate + '% of requests' : 'no requests', t.s5xx ? 'bad' : '') +
+    kpi('Response p95', ms(t.p95_ms) || 'not logged', t.timed ? 'avg ' + ms(t.avg_ms) + ' · ' + n(t.timed) + ' timed' : 'no server prints a duration', t.p95_ms == null ? 'dim' : '') +
+    kpi('Apps', t.running + ' up', t.stopped + ' stopped · ' + t.crashed + ' crashed' + (t.crashes ? ' · ' + t.crashes + ' crashes in ' + label : ''), t.crashed ? 'bad' : '') +
+    kpi('CPU · memory', t.cpu_percent + '%', mem(t.memory_mb) + ' in managed apps') +
+    '</div><div class="highs">' +
+    high('Busiest', busiest, busiest ? busiest.share + '% of traffic' : null, busiest ? n(busiest.requests) + ' requests' : 'no traffic in this window') +
+    high('Most errors', worst, worst ? worst.error_rate + '% failing' : null, worst ? n(worst.errors) + ' of ' + n(worst.requests) : 'no failed requests', worst ? 'bad' : 'good') +
+    high('Slowest', slowest, slowest ? 'p95 ' + ms(slowest.p95_ms) : null, slowest ? 'avg ' + ms(slowest.avg_ms) : 'no app logs its response time') +
+    '</div><section class="panel"><div class="ph-head"><strong>Requests over time</strong><span>all counted apps · ' +
+    Math.max(1, Math.round(d.bucket_minutes)) + ' min buckets</span></div>' + chart(d.points, m) + '</section>' +
+    '<div class="split"><section class="panel"><div class="ph-head"><strong>Response codes</strong></div>' + splitBar(CODES, t) +
+    '<div class="ph-head spaced"><strong>Where requests come from</strong></div>' + splitBar(SOURCES, t) + '</section>' +
+    '<section class="panel"><div class="ph-head"><strong>Share of load</strong><span>requests · ' + label + '</span></div>' +
+    (active.length ? '<ul class="share">' + active.slice(0, 10).map(a => '<li><span class="sn" title="' + esc(a.name) + '">' + esc(a.name) +
+      '</span><span class="track"><i style="width:' + (a.requests * 100 / top) + '%"></i></span><span class="num">' + n(a.requests) +
+      '</span><span class="num muted">' + a.share + '%</span></li>').join('') + '</ul>' : '<p class="hint">No traffic in this window.</p>') +
+    '</section></div><div class="split">';
+
+  if (m >= 360) h += '<section class="panel"><div class="ph-head"><strong>Busiest hours</strong><span>requests by hour of day · ' + label +
+    '</span></div><div class="hours">' + hours.map((v, i) => '<i class="' + (i === hbest && v ? 'top' : '') + '" style="height:' +
+    Math.max(2, v * 100 / hpeak) + '%" title="' + String(i).padStart(2, '0') + ':00 — ' + v.toLocaleString() + ' requests"></i>').join('') +
+    '</div><div class="haxis"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>' +
+    (hours.some(Boolean) ? '<p class="hint">Busiest at ' + String(hbest).padStart(2, '0') + ':00 with ' + hours[hbest].toLocaleString() + ' requests.</p>' : '') +
+    '</section>';
+
+  h += '<section class="panel"><div class="ph-head"><strong>Top endpoints</strong><span>IDs in paths grouped as :id</span></div>' +
+    (d.top_paths.length ? '<table class="top"><tbody>' + d.top_paths.map(p => '<tr><td class="mono meth">' + esc(p.method) +
+      '</td><td class="mono" title="' + esc(p.path) + '">' + esc(p.path) + '</td><td class="muted" style="width:28%">' + esc(names[p.app_id] || '—') +
+      '</td><td class="num" style="width:58px">' + n(p.requests) + '</td><td class="num ' + (p.errors ? 'red' : '') + '" style="width:64px">' +
+      (p.errors ? n(p.errors) + ' err' : '') + '</td></tr>').join('') + '</tbody></table>' : '<p class="hint">No requests in the last ' + label + '.</p>') +
+    '</section></div><div class="ph-head spaced"><strong>Per application</strong><span>' + counted.length + ' counted · busiest first</span></div>' +
+    (counted.length ? '<div class="cards">' + counted.map(a => card(a, label)).join('') + '</div>'
+      : '<p class="hint">No application has printed a request line yet.</p>');
+
+  if (uncounted.length) h += '<details class="unc"' + (document.querySelector('details.unc')?.open ? ' open' : '') + '><summary>' + uncounted.length +
+    ' not counted — these apps have printed no request lines, so their traffic is unknown rather than zero</summary><ul>' +
+    uncounted.map(a => '<li><span class="dot ' + esc(a.status) + '"></span><b>' + esc(a.name) + '</b><span class="muted">' + esc(a.note) + '</span></li>').join('') +
+    '</ul></details>';
+
+  h += '<p class="note">Counted from the access log each application prints, as captured by God Father — so only apps started there, ' +
+    'and only servers that log requests. Response time appears only where the server prints one. History is kept for ' + d.retention_days + ' days.</p>';
+
+  document.getElementById('anpane').innerHTML = h;
+}
+
+renderViews();
+renderWindows();
+if (view === 'analytics') setView('analytics');
+
+// ------------------------------------------------------------ News ticker
+// The same tape as the dashboard's, polled rather than pushed so this server
+// stays plain read-only GETs. A new headline joins the end of the tape right
+// behind what is scrolling now; when news runs out, recent headlines loop.
+(function(){
+  // Pixels per second; the choice is remembered, like the refresh interval.
+  const SPEEDS = [['slow', 'Slow', 70], ['normal', 'Normal', 120], ['fast', 'Fast', 180]];
+  let speed = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'slow' : 'normal';
+  try { const s = localStorage.getItem('gf_news_speed'); if (SPEEDS.some(x => x[0] === s)) speed = s; } catch {}
+  let SPEED = SPEEDS.find(x => x[0] === speed)[2];
+  function renderSpeed(){
+    const box = document.getElementById('tkspeed');
+    box.innerHTML = '';
+    SPEEDS.forEach(([key, label, px]) => {
+      const b = document.createElement('button');
+      b.textContent = label; if (key === speed) b.className = 'on';
+      b.onclick = () => {
+        speed = key; SPEED = px;
+        try { localStorage.setItem('gf_news_speed', key); } catch {}
+        renderSpeed();
+      };
+      box.appendChild(b);
+    });
+  }
+  renderSpeed();
+  const BACKLOG = 40, MAX_PENDING = 15, POLL = 4000;
+  const view = document.getElementById('tkview'), track = document.getElementById('tktrack');
+  let backlog = [], pending = [], cursor = 0, newest = 0, offset = view.clientWidth, paused = false, last = performance.now();
+
+  function hhmm(iso){ const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false}); }
+  function build(item, fresh){
+    const el = document.createElement('span');
+    el.className = 'tk-item lv-' + item.level + (fresh ? ' fresh' : '');
+    [['tk-time', hhmm(item.created_at)], ['tk-app', item.app_name || 'God Father'], ['tk-text', item.message]].forEach(([c, t]) => {
+      const s = document.createElement('span'); s.className = c; s.textContent = t; el.appendChild(s);
+    });
+    return el;
+  }
+  function next(){
+    if (pending.length) return build(pending.shift(), true);
+    if (!backlog.length) return null;
+    const item = backlog[cursor % backlog.length]; cursor = (cursor + 1) % backlog.length;
+    return build(item, false);
+  }
+  function tick(now){
+    const dt = Math.min(now - last, 100) / 1000; last = now;
+    if (!paused && track.firstElementChild) offset -= SPEED * dt;
+    let first = track.firstElementChild;
+    while (first && offset + first.offsetWidth < 0){ offset += first.offsetWidth; first.remove(); first = track.firstElementChild; }
+    while (offset + track.scrollWidth <= view.clientWidth){ const el = next(); if (!el) break; track.appendChild(el); }
+    if (!track.firstElementChild) offset = view.clientWidth;
+    track.style.transform = 'translateX(' + offset + 'px)';
+    requestAnimationFrame(tick);
+  }
+  async function poll(){
+    const label = document.getElementById('tklabel');
+    try {
+      const res = await fetch('/api/news?limit=' + BACKLOG + '&after=' + newest, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const items = (await res.json()).sort((a, b) => a.id - b.id);
+      label.classList.add('on');
+      if (!items.length) return;
+      const announce = newest > 0;
+      newest = items[items.length - 1].id;
+      const first = !backlog.length;
+      backlog = backlog.concat(items).slice(-BACKLOG);
+      cursor = cursor % backlog.length;
+      // Show news at once, latest first, rather than an empty bar filling slowly.
+      if (first && !announce){ cursor = Math.max(0, backlog.length - 8); offset = 0; }
+      if (announce) pending = pending.concat(items).slice(-MAX_PENDING);
+      document.getElementById('tkempty').hidden = true;
+    } catch { label.classList.remove('on'); }
+  }
+  view.addEventListener('mouseenter', () => paused = true);
+  view.addEventListener('mouseleave', () => paused = false);
+  poll(); setInterval(poll, POLL);
+  requestAnimationFrame(tick);
+})();
+
+// ------------------------------------------------------------ Live log chat
+// Every app's log as one plain list: newest at the bottom, one line let in at a time at
+// a readable pace, hover to hold. Polled, like everything else on this page.
+(function(){
+  const KEEP = 80, MAX_QUEUE = 60, POLL = 1500;
+  const wl = document.getElementById('wl'), panel = document.getElementById('lc'), list = document.getElementById('lclist');
+  let open = true;
+  try { open = localStorage.getItem('gf_wall_logs') !== 'hidden'; } catch {}
+  let newest = 0, queue = [], skipped = 0, held = false, only = null, last = 0;
+  const apps = new Map();
+
+  function hms(iso){ const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false}); }
+  function gap(){ return queue.length > 30 ? 140 : queue.length > 10 ? 280 : 520; }
+
+  function applyOpen(){
+    panel.hidden = !open;
+    wl.classList.toggle('with-logs', open);
+    document.getElementById('lctoggle').classList.toggle('on', open);
+    if (typeof render === 'function' && view === 'wall') render(false);
+  }
+  document.getElementById('lctoggle').onclick = () => {
+    open = !open;
+    try { localStorage.setItem('gf_wall_logs', open ? 'shown' : 'hidden'); } catch {}
+    applyOpen();
+  };
+
+  function renderChips(){
+    const box = document.getElementById('lcchips');
+    box.hidden = apps.size < 2;
+    box.innerHTML = '';
+    const make = (id, name) => {
+      const b = document.createElement('button');
+      b.textContent = name; if (only === id) b.className = 'on';
+      b.onclick = () => { only = (only === id ? null : id); queue = []; skipped = 0; renderChips(); refilter(); };
+      box.appendChild(b);
+    };
+    make(null, 'All');
+    [...apps.entries()].sort((a, b) => a[1].localeCompare(b[1])).forEach(([id, name]) => make(id, name));
+  }
+  function refilter(){
+    list.querySelectorAll('.lc-msg').forEach(el => { el.hidden = only !== null && Number(el.dataset.app) !== only; });
+  }
+
+  function add(node){
+    const empty = document.getElementById('lcempty'); if (empty) empty.remove();
+    list.appendChild(node);
+    while (list.children.length > KEEP) list.firstElementChild.remove();
+    if (!held) list.scrollTop = list.scrollHeight;
+  }
+  // Same tidying as the dashboard: an access-log line becomes "GET /x → 200",
+  // and a timestamp the app printed at the front is dropped for the panel's own.
+  const ACCESS = /"(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS) (\S+) HTTP\/[\d.]+" (\d{3})/;
+  const STAMP = /^\[?\d{4}-\d\d-\d\d[T ][\d:.,]+(?:Z|[+-]\d\d:?\d\d)?\]?\s*[-|]?\s*/;
+  function tidy(item){
+    const r = ACCESS.exec(item.message);
+    if (r){ const st = Number(r[3]); return [r[1] + ' ' + r[2] + ' → ' + st, st >= 500 ? 'error' : st >= 400 ? 'warn' : item.level]; }
+    return [item.message.replace(STAMP, '') || item.message, item.level];
+  }
+  function line(item){
+    const [text, level] = tidy(item);
+    const el = document.createElement('div');
+    // Prefixed: this page already uses .good and .info for chart colours.
+    el.className = 'lc-msg lv-' + level;
+    el.title = item.message;
+    el.dataset.app = item.app_id;
+    el.hidden = only !== null && item.app_id !== only;
+    [['lc-time', hms(item.created_at)], ['lc-app', item.app_name], ['lc-text', text]].forEach(([c, t]) => {
+      const part = document.createElement('span'); part.className = c; part.textContent = t; el.appendChild(part);
+    });
+    return el;
+  }
+
+  let resumeBtn = null;
+  function setHeld(value){
+    held = value;
+    document.getElementById('lcstate').textContent = held ? 'paused' : 'live';
+    if (held && !resumeBtn){
+      resumeBtn = document.createElement('button'); resumeBtn.className = 'lc-resume';
+      resumeBtn.onclick = () => setHeld(false);
+      panel.appendChild(resumeBtn);
+    }
+    if (!held && resumeBtn){ resumeBtn.remove(); resumeBtn = null; list.scrollTop = list.scrollHeight; }
+    if (resumeBtn) resumeBtn.textContent = queue.length ? queue.length + ' new line' + (queue.length > 1 ? 's' : '') + ' ↓' : 'Back to live ↓';
+  }
+  list.addEventListener('mouseenter', () => setHeld(true));
+  list.addEventListener('mouseleave', () => setHeld(false));
+  list.addEventListener('scroll', () => {
+    if (!held && list.scrollHeight - list.scrollTop - list.clientHeight > 60) setHeld(true);
+  });
+
+  async function poll(){
+    try {
+      const res = await fetch('/api/news/logs?limit=' + (newest ? MAX_QUEUE : 30) + '&after=' + newest, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const items = (await res.json()).sort((a, b) => a.id - b.id);
+      document.getElementById('lcdot').classList.add('on');
+      if (!held) document.getElementById('lcstate').textContent = 'live';
+      if (!items.length) return;
+      const first = newest === 0;
+      // More arrived than one poll returns: the gap is real, so say so.
+      if (!first && items[0].id > newest + 1) skipped += items[0].id - newest - 1;
+      newest = items[items.length - 1].id;
+      let grew = false;
+      items.forEach(i => { if (!apps.has(i.app_id)){ apps.set(i.app_id, i.app_name); grew = true; } });
+      if (grew) renderChips();
+      if (first){ items.forEach(i => add(line(i))); return; }
+      items.forEach(i => { if (only === null || i.app_id === only) queue.push(i); });
+      if (queue.length > MAX_QUEUE){ skipped += queue.length - MAX_QUEUE; queue.splice(0, queue.length - MAX_QUEUE); }
+      if (held) setHeld(true);
+    } catch {
+      document.getElementById('lcdot').classList.remove('on');
+      document.getElementById('lcstate').textContent = 'cannot reach God Father';
+    }
+  }
+
+  setInterval(() => {
+    if (held || !queue.length || !open) return;
+    const now = performance.now();
+    if (now - last < gap()) return;
+    last = now;
+    if (skipped){
+      const s = document.createElement('div'); s.className = 'lc-skip';
+      s.textContent = skipped + ' line' + (skipped > 1 ? 's' : '') + ' skipped to keep up';
+      skipped = 0; add(s);
+    }
+    add(line(queue.shift()));
+  }, 60);
+
+  applyOpen();
+  poll(); setInterval(poll, POLL);
+})();
+</script>
+</body>
+</html>

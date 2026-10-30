@@ -1,0 +1,16 @@
+# Python
+backend/.venv/
+__pycache__/
+*.py[cod]
+
+# Runtime data — local database and captured logs
+backend/data/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
